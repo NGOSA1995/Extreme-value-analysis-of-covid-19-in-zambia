@@ -1,4 +1,4 @@
-# Extreme-value-analysis-of-covid-19-in-zambia
+
 # ==========================================================
 # 1. SETUP & DATA LOADING
 # ==========================================================
@@ -66,7 +66,7 @@ for (b in block_sizes) {
 print(xtable(results, digits=3), include.rownames = FALSE)
 
 # ==========================================================
-# 3. FIGURE: Q-Q PLOT (NO GRIDS)
+#  FIGURE: Q-Q PLOT 
 # ==========================================================
 obs_sorted <- sort(final_maxima)
 theory_quantiles <- qgev(ppoints(length(final_maxima)), loc = loc, scale = scale, shape = shape)
@@ -86,7 +86,7 @@ ggplot(qq_data, aes(x = Theoretical, y = Observed)) +
   )
 
 # ==========================================================
-# 4. BOOTSTRAP RETURN LEVELS
+# BOOTSTRAP RETURN LEVELS
 # ==========================================================
 get_return_levels <- function(data, indices, periods) {
   d <- data[indices]
@@ -107,7 +107,7 @@ boot_summary <- data.frame(
 )
 
 # ==========================================================
-# 5. FIGURE: RETURN LEVEL PLOT (NO GRIDS)
+#  FIGURE: RETURN LEVEL PLOT 
 # ==========================================================
 ggplot(boot_summary, aes(x = Return_Period, y = Estimated_RL)) +
   geom_ribbon(aes(ymin = Lower_CI, ymax = Upper_CI), fill = "gray80", alpha = 0.5) +
@@ -130,7 +130,7 @@ library(extRemes)
 library(tidyverse)
 
 # ----------------------------------------------------------
-# 0. DATA ALIGNMENT
+#  DATA ALIGNMENT
 # ----------------------------------------------------------
 if (!exists("dates")) {
   dates <- seq(as.Date("2020-03-18"), by = "day", length.out = length(active_cases))
@@ -139,7 +139,7 @@ if (!exists("dates")) {
 u_selected <- 61.26
 
 # ----------------------------------------------------------
-# 1. THRESHOLD SENSITIVITY DATA GENERATION
+#  THRESHOLD SENSITIVITY DATA GENERATION
 # ----------------------------------------------------------
 percentiles <- seq(0.85, 0.95, by = 0.01)
 u_values <- quantile(active_cases, percentiles)
@@ -174,7 +174,7 @@ threshold_table_full <- map_df(seq_along(u_values), function(i) {
 })
 
 # ----------------------------------------------------------
-# 2. FINAL MODEL FIT (L-MOMENTS)
+#  FINAL MODEL FIT (L-MOMENTS)
 # ----------------------------------------------------------
 declustered_data <- decluster(active_cases, threshold = u_selected, method = "runs", r = 7)
 
@@ -184,7 +184,7 @@ final_gpd_fit <- fevd(declustered_data,
                       method = "Lmoments")
 
 # ----------------------------------------------------------
-# 3. ANNUAL RETURN LEVELS (TABLE)
+#  ANNUAL RETURN LEVELS (TABLE)
 # ----------------------------------------------------------
 years <- c(1, 2, 5, 10, 25, 50, 100)
 long_term_rl <- return.level(final_gpd_fit, return.period = years * 365.25, do.ci = TRUE)
@@ -200,10 +200,10 @@ print("--- ANNUAL RETURN LEVELS (1 TO 100 YEARS) ---")
 print(annual_table)
 
 # ----------------------------------------------------------
-# 4. CONSOLIDATED FIGURES (NO GRIDS)
+#  CONSOLIDATED FIGURES (NO GRIDS)
 # ----------------------------------------------------------
 
-# FIG 4.0: Time Series Exceedances
+#  Time Series Exceedances plot
 plot_ts_df <- data.frame(Date = dates, Cases = active_cases) %>%
   mutate(Status = ifelse(Cases > u_selected, "Exceedance", "Baseline"))
 
@@ -217,7 +217,7 @@ ts_gg <- ggplot(plot_ts_df, aes(x = Date, y = Cases)) +
   theme_bw() + 
   theme(legend.position = "none", panel.grid = element_blank())
 
-# FIG 4.1: Mean Residual Life Plot
+#  Mean Residual Life Plot
 mrl_gg <- ggplot(threshold_table_full, aes(x = Threshold_u, y = Mean_Excess)) +
   geom_ribbon(aes(ymin = Lower_CI, ymax = Upper_CI), fill = "steelblue", alpha = 0.2) +
   geom_line(color = "darkred", linewidth = 1) +
@@ -235,7 +235,7 @@ shape_stab_gg <- ggplot(threshold_table_full, aes(x = Threshold_u, y = Shape_xi)
   labs(x = "Threshold (u)", y = "Shape Estimate (\u03BE)") +
   theme_bw() + theme(panel.grid = element_blank())
 
-# FIG 4.3: Scale Parameter Stability
+#  Scale Parameter Stability
 scale_stab_gg <- ggplot(threshold_table_full, aes(x = Threshold_u, y = Scale_sigma)) +
   geom_ribbon(aes(ymin = Scale_sigma * 0.9, ymax = Scale_sigma * 1.1), fill = "darkblue", alpha = 0.1) +
   geom_line(color = "darkblue", linewidth = 1) +
@@ -244,7 +244,7 @@ scale_stab_gg <- ggplot(threshold_table_full, aes(x = Threshold_u, y = Scale_sig
   labs(x = "Threshold (u)", y = "Scale Estimate (\u03C3)") +
   theme_bw() + theme(panel.grid = element_blank())
 
-# FIG 4.4: 100-Year Projection (Ref: gev_return.pdf)
+# 100-Year Projection (Ref: gev_return.pdf)
 plot_years <- seq(1, 100, length.out = 100)
 rl_curve <- return.level(final_gpd_fit, return.period = plot_years * 365.25, do.ci = TRUE)
 df_100yr <- data.frame(Year = plot_years, Level = rl_curve[,2], Lower = rl_curve[,1], Upper = rl_curve[,3])
@@ -255,7 +255,7 @@ rl_100yr_gg <- ggplot(df_100yr, aes(x = Year, y = Level)) +
   labs(x = "Return Period (Years)", y = "Return Level (Cases per Million)") +
   theme_bw() + theme(panel.grid = element_blank())
 
-# FIG 4.5: Q-Q Plot (Ref: Q-Q PLOT.pdf)
+#  Q-Q Plot (Ref: Q-Q PLOT.pdf)
 all_data <- as.numeric(datagrabber(final_gpd_fit)[, 1])
 exceedances <- sort(all_data[all_data > u_selected] - u_selected)
 n_exc <- length(exceedances)
@@ -271,10 +271,62 @@ qq_gg <- ggplot(data.frame(Emp = exceedances, Theo = sort(theo_q)), aes(x = Theo
   theme_bw() + theme(panel.grid = element_blank())
 
 # ----------------------------------------------------------
-# 5. PRINT ALL FIGURES
+#  PRINT ALL FIGURES
 # ----------------------------------------------------------
 print(ts_gg)
 print(mrl_gg)
 print(shape_stab_gg)
 print(scale_stab_gg)
 print(qq_gg)
+
+
+
+# ==========================================================
+# NON-STATIONARY GEV MODEL COMPARISON
+# ==========================================================
+
+#  Prepare data and covariate (using 28-day maxima as example)
+# 'final_maxima' should be your vector of block maxima
+n_blocks <- length(final_maxima)
+time_cov <- 1:n_blocks
+time_cov_sq <- time_cov^2
+
+#  Fit the three candidate models
+# Stationary Model
+fit_stat <- fevd(final_maxima, type = "GEV")
+
+# Linear Trend Model (Location parameter depends on Time)
+fit_lin  <- fevd(final_maxima, type = "GEV", 
+                 location.fun = ~time_cov, data = data.frame(time_cov))
+
+# Quadratic Trend Model (Location parameter depends on Time + Time^2)
+fit_quad <- fevd(final_maxima, type = "GEV", 
+                 location.fun = ~time_cov + time_cov_sq, 
+                 data = data.frame(time_cov, time_cov_sq))
+
+#  Extract Metrics and Construct Table
+models <- list(fit_stat, fit_lin, fit_quad)
+model_names <- c("Stationary", "Linear Trend", "Quadratic Trend")
+
+comp_results <- data.frame(
+  Model = model_names,
+  Log_Lik = sapply(models, function(x) as.numeric(x$results$value) * -1), # Convert to positive log-lik
+  AIC = sapply(models, function(x) summary(x)$AIC),
+  BIC = sapply(models, function(x) summary(x)$BIC),
+  Par = c(3, 4, 5) # Number of parameters for each model
+)
+
+#  Export to LaTeX using xtable
+library(xtable)
+
+# Ensure numeric cleanliness
+clean_comp <- as.data.frame(matrix(as.numeric(as.matrix(comp_results[,-1])), ncol = 4))
+clean_comp <- cbind(Model = model_names, clean_comp)
+colnames(clean_comp) <- c("Model", "Log-Lik.", "AIC", "BIC", "Par.")
+
+print(xtable(clean_comp, 
+             digits = c(0, 0, 2, 2, 2, 0), 
+             caption = "Model Comparison for Non-Stationary GEV Analysis"), 
+      include.rownames = FALSE, 
+      comment = FALSE,
+      booktabs = TRUE)

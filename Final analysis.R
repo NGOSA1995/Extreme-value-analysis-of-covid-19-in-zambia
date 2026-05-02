@@ -199,9 +199,59 @@ annual_table <- data.frame(
 print("--- ANNUAL RETURN LEVELS (1 TO 100 YEARS) ---")
 print(annual_table)
 
+# ==========================================================
+# COMPLETE EXTREME VALUE ANALYSIS: ZAMBIA COVID-19
+# ==========================================================
+
 # ----------------------------------------------------------
-#  CONSOLIDATED FIGURES (NO GRIDS)
+#  FIXED DATA ALIGNMENT (Ensuring 2023 Coverage)
 # ----------------------------------------------------------
+# We extract dates and cases directly from the filtered dataframe in Section 1
+dates <- zambia_data$Day
+active_cases <- zambia_data$cases
+
+u_selected <- 61.26
+
+# ----------------------------------------------------------
+#  UPDATED TIME SERIES EXCEEDANCES PLOT
+# ----------------------------------------------------------
+# Prepare the plotting dataframe with the synchronized dates
+plot_ts_df <- data.frame(Date = dates, Cases = active_cases) %>%
+  mutate(Status = ifelse(Cases > u_selected, "Exceedance", "Baseline"))
+
+ts_gg <- ggplot(plot_ts_df, aes(x = Date, y = Cases)) +
+  # Draw the base line for all cases
+  geom_line(color = "gray80", linewidth = 0.5) +
+  # Highlight the exceedances in dark red
+  geom_point(data = filter(plot_ts_df, Status == "Exceedance"), 
+             aes(color = Status), size = 1.5) +
+  # The threshold line
+  geom_hline(yintercept = u_selected, linetype = "dashed", color = "red", linewidth = 0.8) +
+  scale_color_manual(values = c("Exceedance" = "darkred")) +
+  # FORCING THE X-AXIS TO SHOW 2020 THROUGH 2023
+  scale_x_date(
+    date_breaks = "1 year", 
+    date_labels = "%Y",
+    limits = c(as.Date("2020-01-01"), as.Date("2023-12-31"))
+  ) +
+  labs(
+    title = "COVID-19 Exceedances in Zambia",
+    x = "Timeline (2020 - 2023)", 
+    y = "Active Cases (per Million)"
+  ) +
+  theme_bw() + 
+  theme(
+    legend.position = "none", 
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+# Print the fixed plot
+print(ts_gg)
+
+
+
+
 
 #  Time Series Exceedances plot
 plot_ts_df <- data.frame(Date = dates, Cases = active_cases) %>%

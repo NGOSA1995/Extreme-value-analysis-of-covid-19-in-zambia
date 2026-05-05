@@ -172,6 +172,75 @@ threshold_table_full <- map_df(seq_along(u_values), function(i) {
     )
   }
 })
+print(threshold_table_full)
+# ----------------------------------------------------------
+#  FINAL MODEL FIT (L-MOMENTS)
+# ----------------------------------------------------------
+declustered_data <- decluster(active_cases, threshold = u_selected, method = "runs", r = 7)
+
+final_gpd_fit <- fevd(declustered_data, 
+                      threshold = u_selected, 
+                      type = "GP", 
+                      method = "Lmoments")
+
+# ----------------------------------------------------------
+#  ANNUAL RETURN LEVELS (TABLE)
+# ----------------------------------------------------------
+years <- c(1, 2, 5, 10, 25, 50, 100)
+long_term_rl <- return.level(final_gpd_fit, return.period = years * 365.25, do.ci = TRUE)
+
+annual_table <- data.frame(
+  Return_Period_Years = years,
+  Lower_95_CI = round(as.numeric(long_term_rl[,1]), 2),
+  Estimate = round(as.numeric(long_term_rl[,2]), 2),
+  Upper_95_CI = round(as.numeric(long_term_rl[,3]), 2)
+)
+
+print("--- ANNUAL RETURN LEVELS (1 TO 100 YEARS) ---")
+print(annual_table)
+
+
+# 1. CLEAN DATA: Only keep strictly positive cases (removes pre-pandemic zeros)
+active_cases <- cases_vector[!is.na(cases_vector) & cases_vector > 0]
+
+# 2. Re-calculate Thresholds based on this subset
+percentiles <- seq(0.85, 0.95, by = 0.01)
+u_values <- quantile(active_cases, percentiles)
+
+# 3. Generate the Table
+threshold_table_results <- map_df(seq_along(u_values), function(i) {
+  u <- as.numeric(u_values[i])
+  exc <- active_cases[active_cases > u]
+  n_exc <- length(exc)
+  
+  # Calculate Mean Excess Stats
+  m_excess <- mean(exc - u, na.rm = TRUE)
+  s_error  <- sd(exc - u, na.rm = TRUE) / sqrt(n_exc)
+  
+  # Use your 7-day declustering logic
+  data_dec_tmp <- decluster(active_cases, threshold = u, method = "runs", r = 7)
+  n_clusters <- sum(data_dec_tmp > u, na.rm = TRUE)
+  
+  # Fit GPD with L-moments
+  fit_tmp <- try(fevd(data_dec_tmp, threshold = u, type = "GP", method = "Lmoments"), silent = TRUE)
+  
+  if(!inherits(fit_tmp, "try-error")) {
+    params <- distill(fit_tmp)
+    data.frame(
+      Percentile   = names(u_values)[i],
+      Threshold_u  = round(u, 2),
+      Mean_Excess  = round(m_excess, 2),
+      Lower_CI     = round(m_excess - (1.96 * s_error), 2),
+      Upper_CI     = round(m_excess + (1.96 * s_error), 2),
+      Clusters_Nc  = n_clusters,
+      Scale_sigma  = round(as.numeric(params["scale"]), 3),
+      Shape_xi     = round(as.numeric(params["shape"]), 3)
+    )
+  }
+})
+
+# Display the final table
+print(threshold_table_results, row.names = FALSE)
 
 # ----------------------------------------------------------
 #  FINAL MODEL FIT (L-MOMENTS)

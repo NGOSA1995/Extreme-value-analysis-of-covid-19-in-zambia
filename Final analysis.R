@@ -42,27 +42,46 @@ for (b in block_sizes) {
     gev_fit <- fevd(block_maxima_temp, type = "GEV", method = "Lmoments")
     params <- distill(gev_fit)
     
-    # Validation Stats
+    # --- VALIDATION STATS ---
     p_seq <- ppoints(length(block_maxima_temp))
     q_theory <- qgev(p_seq, loc = params["location"], scale = params["scale"], shape = params["shape"])
-    rmse_val <- sqrt(mean((sort(block_maxima_temp) - q_theory)^2))
-    ks_pval <- ks.test(block_maxima_temp, "pgev", loc = params["location"], 
-                       scale = params["scale"], shape = params["shape"])$p.value
     
+    # RMSE
+    rmse_val <- sqrt(mean((sort(block_maxima_temp) - q_theory)^2))
+    
+    # KS Test
+    ks_pval <- ks.test(block_maxima_temp, "pgev", 
+                       loc = params["location"], 
+                       scale = params["scale"], 
+                       shape = params["shape"])$p.value
+    
+    # Anderson-Darling Test 
+    ad_pval <- ad.test(block_maxima_temp, "pgev", 
+                       loc = params["location"], 
+                       scale = params["scale"], 
+                       shape = params["shape"])$p.value
+    
+    # Combine results
     results <- rbind(results, data.frame(
-      BlockSize = b, nBlocks = length(block_maxima_temp), RMSE = rmse_val, KS_pval = ks_pval,
-      Location = params["location"], Scale = params["scale"], Shape = params["shape"]
+      BlockSize = b, 
+      nBlocks = length(block_maxima_temp), 
+      RMSE = rmse_val, 
+      KS_pval = ks_pval,
+      AD_pval = ad_pval, # Added to dataframe
+      Location = params["location"], 
+      Scale = params["scale"], 
+      Shape = params["shape"]
     ))
     
-    # Store 28-day variables for final plotting
     if(b == 28) {
       final_maxima <- block_maxima_temp
       final_fit <- gev_fit
       loc <- params["location"]; scale <- params["scale"]; shape <- params["shape"]
     }
-  }, error = function(e) {})
+  }, error = function(e) { message(paste("Error at block size", b, ":", e)) })
 }
 
+# Output the table with 3 decimal places
 print(xtable(results, digits=3), include.rownames = FALSE)
 
 # ==========================================================
